@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>언어 학습 녹음기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; background: #fdf6ec; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    button { font-size: 1rem; margin: 0.5rem; padding: 1rem 2rem; border-radius: 1rem; border: none; background: #ffe066; }
+    button:disabled { background: #ddd; }
+    audio { margin-top: 1rem; width: 100%; }
+  </style>
+</head>
+<body>
+  <h1 id="title">태그 음성 학습기</h1>
+  <p id="message">준비 중...</p>
+
+  <button id="replayBtn" disabled>🔁 다시 듣기</button>
+  <button id="recordBtn" disabled>🎤 내 목소리 녹음하기</button>
+  <br/>
+  <button id="stopBtn" style="display:none;">⏹ 녹음 종료</button>
+  <audio id="player" controls></audio>
+
+  <script>
+    const queryId = new URLSearchParams(window.location.search).get("id") || "car_start";
+    const defaultAudioSrc = `/audio/${queryId}.mp3`; // 성우 음성 경로
+    const player = document.getElementById("player");
+    const replayBtn = document.getElementById("replayBtn");
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const message = document.getElementById("message");
+
+    let mediaRecorder, audioChunks = [], currentBlob;
+
+    const getKey = () => `recordings_${queryId}`;
+
+    const loadLatestRecording = () => {
+      const saved = JSON.parse(localStorage.getItem(getKey()) || "[]");
+      if (saved.length > 0) {
+        const latest = saved[saved.length - 1];
+        return latest.url;
+      }
+      return null;
+    };
+
+    const saveRecording = (blob) => {
+      const url = URL.createObjectURL(blob);
+      const saved = JSON.parse(localStorage.getItem(getKey()) || "[]");
+      saved.push({ timestamp: new Date().toISOString(), url });
+      localStorage.setItem(getKey(), JSON.stringify(saved));
+    };
+
+    const autoPlay = () => {
+      const latest = loadLatestRecording();
+      if (latest) {
+        message.textContent = "🔊 내 목소리 재생 중";
+        player.src = latest;
+      } else {
+        message.textContent = "🔊 성우 목소리 재생 중";
+        player.src = defaultAudioSrc;
+      }
+      player.play();
+      replayBtn.disabled = false;
+      recordBtn.disabled = false;
+    };
+
+    replayBtn.onclick = () => {
+      player.play();
+    };
+
+    recordBtn.onclick = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        currentBlob = blob;
+        player.src = URL.createObjectURL(blob);
+        player.play();
+        saveRecording(blob);
+        message.textContent = "✅ 녹음 저장 완료";
+      };
+
+      mediaRecorder.start();
+      recordBtn.style.display = "none";
+      stopBtn.style.display = "inline-block";
+      message.textContent = "🎙 녹음 중...";
+    };
+
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      stopBtn.style.display = "none";
+      recordBtn.style.display = "inline-block";
+    };
+
+    window.onload = autoPlay;
+  </script>
+</body>
+</html>
