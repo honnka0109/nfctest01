@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>언어 학습 녹음기</title>
+  <title>아이폰 호환 언어 녹음기</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: sans-serif; text-align: center; padding: 2rem; background: #fdf6ec; }
@@ -13,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h1 id="title">태그 음성 학습기</h1>
+  <h1 id="title">iPhone 호환 음성 학습기</h1>
   <p id="message">준비 중...</p>
 
   <button id="replayBtn" disabled>🔁 다시 듣기</button>
@@ -32,6 +33,7 @@
     const message = document.getElementById("message");
 
     let mediaRecorder, audioChunks = [], currentBlob;
+    let stream;
 
     const getKey = () => `recordings_${queryId}`;
 
@@ -51,6 +53,10 @@
       localStorage.setItem(getKey(), JSON.stringify(saved));
     };
 
+    const isIOS = () => {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    };
+
     const autoPlay = () => {
       const latest = loadLatestRecording();
       if (latest) {
@@ -63,6 +69,10 @@
       player.play();
       replayBtn.disabled = false;
       recordBtn.disabled = false;
+
+      if (isIOS()) {
+        alert("⚠️ iOS에서는 제한된 녹음 기능이 제공됩니다. 앱 설치를 권장합니다.");
+      }
     };
 
     replayBtn.onclick = () => {
@@ -70,7 +80,11 @@
     };
 
     recordBtn.onclick = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (isIOS()) {
+        alert("⚠️ iPhone 사파리에서는 웹 녹음이 제한되어 있습니다.");
+        return;
+      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
 
